@@ -2,26 +2,30 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. API Configuration
-API_KEY = "AIzaSyABSN1YRt2jaVcEQ8xHPjGy2_W5pOmgszw" 
+# --- 1. API Configuration (SECURE WAY) ---
+# Direct-ah key kudukama, Streamlit Secrets-la irundhu load panroam
+if "GEMINI_API_KEY" in st.secrets:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+else:
+    # Local-la run panna mattum intha key use aagum
+    API_KEY = "AIzaSyD8fnpoix3dfmldUZzXh3L5dfezSHYm0dU" 
+
 genai.configure(api_key=API_KEY)
 
-# 2. AUTO-MODEL PICKER (To bypass 404 Error)
+# --- 2. AUTO-MODEL PICKER ---
 @st.cache_resource
 def load_working_model():
     try:
-        # Scanning for all available models in your API key
         models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Priority list
         if 'models/gemini-1.5-flash' in models: return 'models/gemini-1.5-flash'
         if 'models/gemini-1.5-pro' in models: return 'models/gemini-1.5-pro'
-        return models[0] # Picks the first working one
+        return models[0]
     except:
         return "models/gemini-1.5-flash"
 
 SELECTED_MODEL = load_working_model()
 
-# --- UI Setup ---
+# --- 3. UI Setup ---
 st.set_page_config(page_title="ECE Math AI", page_icon="🔢")
 st.title("🔢 AI Math to LaTeX Converter")
 st.info(f"System Connected to: {SELECTED_MODEL}")
@@ -33,10 +37,10 @@ if uploaded_file is not None:
     st.image(img, caption="Input Equation", use_container_width=True)
     
     if st.button('🚀 Convert Now'):
-        with st.spinner('Analyzing...'):
+        with st.spinner('Analyzing mathematical structure...'):
             try:
                 model = genai.GenerativeModel(SELECTED_MODEL)
-                prompt = "Convert the math in this image to LaTeX code. Output ONLY LaTeX."
+                prompt = "Convert the math in this image to LaTeX code. Output ONLY LaTeX starting and ending with $$."
                 response = model.generate_content([prompt, img])
                 
                 if response.text:
