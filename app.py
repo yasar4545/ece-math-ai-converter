@@ -3,17 +3,28 @@ import google.generativeai as genai
 from PIL import Image
 
 # 1. API Configuration
-# Google AI Studio-la irundhu edutha PUDHU Key-ah inga podunga
 API_KEY = "AIzaSyABSN1YRt2jaVcEQ8xHPjGy2_W5pOmgszw" 
 genai.configure(api_key=API_KEY)
 
-# 2. Force Version Mapping (404 Error Killer)
-# Sila neram 'v1beta' mismatch aagum, adhunala namma direct path use panroam
-MODEL_NAME = "models/gemini-1.5-flash"
+# 2. AUTO-MODEL PICKER (To bypass 404 Error)
+@st.cache_resource
+def load_working_model():
+    try:
+        # Scanning for all available models in your API key
+        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        # Priority list
+        if 'models/gemini-1.5-flash' in models: return 'models/gemini-1.5-flash'
+        if 'models/gemini-1.5-pro' in models: return 'models/gemini-1.5-pro'
+        return models[0] # Picks the first working one
+    except:
+        return "models/gemini-1.5-flash"
 
+SELECTED_MODEL = load_working_model()
+
+# --- UI Setup ---
 st.set_page_config(page_title="ECE Math AI", page_icon="🔢")
 st.title("🔢 AI Math to LaTeX Converter")
-st.caption(f"System Status: Connected to {MODEL_NAME}")
+st.info(f"System Connected to: {SELECTED_MODEL}")
 
 uploaded_file = st.file_uploader("Upload Math Image...", type=["png", "jpg", "jpeg"])
 
@@ -22,21 +33,18 @@ if uploaded_file is not None:
     st.image(img, caption="Input Equation", use_container_width=True)
     
     if st.button('🚀 Convert Now'):
-        with st.spinner('Cloud Analysis in Progress...'):
+        with st.spinner('Analyzing...'):
             try:
-                # Direct Initialization
-                model = genai.GenerativeModel(model_name=MODEL_NAME)
-                
-                prompt = "Convert the mathematical expression in the image to LaTeX. Output ONLY the LaTeX code. Example: $$x^2 + y^2 = z^2$$"
+                model = genai.GenerativeModel(SELECTED_MODEL)
+                prompt = "Convert the math in this image to LaTeX code. Output ONLY LaTeX."
                 response = model.generate_content([prompt, img])
                 
                 if response.text:
                     clean_latex = response.text.replace("```latex", "").replace("```", "").strip()
                     st.success("Conversion Successful!")
                     st.latex(clean_latex)
-                    st.code(clean_latex, language='latex')
+                    st.code(clean_latex)
                 else:
-                    st.error("AI could not read the image. Please try a clearer photo.")
+                    st.error("AI returned empty result.")
             except Exception as e:
-                # Indha error-la available models list varum, check pannunga
                 st.error(f"Execution Error: {e}")
