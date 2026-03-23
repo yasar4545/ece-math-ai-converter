@@ -1,18 +1,14 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-
-# --- 1. API Configuration (SECURE WAY) ---
-# Direct-ah key kudukama, Streamlit Secrets-la irundhu load panroam
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=API_KEY)
 else:
-    # Local-la run panna mattum intha key use aagum
-    API_KEY = "AIzaSyD8fnpoix3dfmldUZzXh3L5dfezSHYm0dU" 
+    st.error("API Key not found in Secrets! Please add it in Streamlit Settings.")
 
 genai.configure(api_key=API_KEY)
 
-# --- 2. AUTO-MODEL PICKER ---
 @st.cache_resource
 def load_working_model():
     try:
@@ -25,7 +21,6 @@ def load_working_model():
 
 SELECTED_MODEL = load_working_model()
 
-# --- 3. UI Setup ---
 st.set_page_config(page_title="ECE Math AI", page_icon="🔢")
 st.title("🔢 AI Math to LaTeX Converter")
 st.info(f"System Connected to: {SELECTED_MODEL}")
